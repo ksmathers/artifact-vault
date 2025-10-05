@@ -5,6 +5,7 @@ import io
 from urllib.parse import urljoin, urlparse, unquote
 from html.parser import HTMLParser
 import logging
+from .cache import Cache
 
 
 class PyPILinkExtractor(HTMLParser):
@@ -49,7 +50,7 @@ class PyPIBackend:
     rewritten in the HTML to point to our cache.
     """
     
-    def __init__(self, config, cache):
+    def __init__(self, config, cache : Cache):
         self.config = config
         self.cache = cache
         self.prefix = config.get('prefix', '/pypi/')
@@ -170,9 +171,9 @@ class PyPIBackend:
         # Check cache first
         hit = self.cache.has(self.prefix, artifact_path)
         if hit:
-            logging.debug(f"Cache hit for {artifact_path}")
-            cached_content = self.cache.get(hit)
-            content_type = self.cache.get_content_type(hit)
+            #logging.debug(f"Cache hit for {artifact_path}")
+            cached_content = hit.binary
+            content_type = hit.content_type
             yield {
                 "total_length": len(cached_content),
                 "content": cached_content,
@@ -228,7 +229,7 @@ class PyPIBackend:
             content = response.content
             
             # Cache the content
-            self.cache.set(self.prefix, artifact_path, content)
+            self.cache.add(self.prefix, artifact_path, content)
             
             # Yield the content
             yield {
@@ -266,7 +267,7 @@ class PyPIBackend:
             content_type = response.headers.get('content-type', 'text/html')
             
             # Cache the modified content
-            self.cache.set(self.prefix, artifact_path, modified_content, content_type=content_type)
+            self.cache.add(self.prefix, artifact_path, modified_content, content_type=content_type)
             
             # Yield the modified content
             yield {
@@ -329,7 +330,7 @@ class PyPIBackend:
             
             if content_buffer:
                 content_type = response.headers.get('content-type', 'application/octet-stream')
-                self.cache.set(self.prefix, artifact_path, bytes(content_buffer), content_type=content_type)
+                self.cache.add(self.prefix, artifact_path, bytes(content_buffer), content_type=content_type)
                 
         except requests.RequestException as e:
             if hasattr(e, 'response') and e.response is not None:

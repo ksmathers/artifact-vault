@@ -2,6 +2,8 @@ import json
 import base64
 import requests
 from urllib.parse import urljoin
+from .cache import Cache
+from typing import Dict
 
 
 class DockerHubBackend:
@@ -17,7 +19,7 @@ class DockerHubBackend:
     - /dockerhub/myuser/myimage/manifests/v1.0
     """
     
-    def __init__(self, config, cache):
+    def __init__(self, config : Dict[str,str], cache : Cache):
         self.config = config
         self.cache = cache
         self.prefix = config.get('prefix', '/dockerhub/')
@@ -143,7 +145,7 @@ class DockerHubBackend:
         # Check cache first
         hit = self.cache.has(self.prefix, artifact_path)
         if hit:
-            cached_content = self.cache.get(hit)
+            cached_content = hit.binary
             yield {
                 "total_length": len(cached_content),
                 "content": cached_content,
@@ -208,7 +210,7 @@ class DockerHubBackend:
                 
                 # Cache the complete content only if download was successful
                 if content_buffer:
-                    self.cache.set(self.prefix, artifact_path, bytes(content_buffer))
+                    self.cache.add(self.prefix, artifact_path, bytes(content_buffer))
                     
             except Exception as e:
                 yield {"error": f"Error during streaming download: {str(e)}"}

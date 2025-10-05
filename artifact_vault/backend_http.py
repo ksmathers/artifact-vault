@@ -1,9 +1,10 @@
-
+from .cache import Cache
+import requests
 
 class HTTPBackend:
-    def __init__(self, config, cache):
+    def __init__(self, config, cache : Cache):
         self.config = config
-        self.cache = cache
+        self.cache : Cache = cache
         self.prefix = config.get('prefix', '/http/')
         self.base_url = config.get('base_url', '')
         if not self.base_url:
@@ -19,7 +20,7 @@ class HTTPBackend:
         hit = self.cache.has(self.prefix, artifact_path)
         if hit:
             # For cached content, yield it as a single block
-            cached_content = self.cache.get(hit)
+            cached_content = hit.binary
             yield {
                 "total_length": len(cached_content), 
                 "content": cached_content,
@@ -54,7 +55,7 @@ class HTTPBackend:
                 
                 # Cache the complete content only if download was successful
                 if content_buffer:
-                    self.cache.set(self.prefix, artifact_path, bytes(content_buffer))
+                    self.cache.add(self.prefix, artifact_path, bytes(content_buffer))
                     
             except Exception as e:
                 yield {"error": f"Error during streaming download: {str(e)}"}
