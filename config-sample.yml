@@ -1,0 +1,17 @@
+http_host: localhost
+http_port: 8080
+cache_dir: /tmp/artifact_cache
+log_level: INFO
+backends:
+  - type: pypi
+    config:
+      prefix: /pypi/
+      index_url: https://pypi.org/simple
+  - type: dockerhub
+    config:
+      prefix: /dockerhub/
+      registry_url: https://registry.hub.docker.com
+  - type: http
+    config:
+      prefix: /example/
+      base_url: https://example.com/artifacts
