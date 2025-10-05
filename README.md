@@ -255,8 +255,5 @@ python main.py --config config.yml --log-level DEBUG
 
 ## License
 
-[Add your license information here]
+This software is licensed under the Gnu Public License Version 2.0 (GPLv2).   See the file 'LICENSE' for details.
 
-## Contributing
-
-[Add contribution guidelines here]

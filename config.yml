@@ -1,0 +1,27 @@
+
+# Artifact Vault for Apache and Maven artifacts to support Docker builds
+#
+# ARG APACHE_MIRROR=http://10.0.42.75:8080/archive.apache.org
+# ARG MAVEN_MIRROR=http://10.0.42.75:8080/repo1.maven.org
+
+http_host: 0.0.0.0
+http_port: 8080
+cache_dir: /Volumes/Extra/artifact_vault
+log_level: INFO
+backends:
+  - type: http
+    name: apache.org
+    config:
+      prefix: /archive.apache.org/
+      base_url: https://archive.apache.org/dist
+  - type: http
+    name: maven.org
+    config:
+      prefix: /repo1.maven.org/
+      base_url: https://repo1.maven.org/maven2
+  - type: pypi
+    name: pypi.org
+    config:
+      prefix: /pypi/
+      index_url: https://pypi.org/simple
+      packages_url: https://files.pythonhosted.org/packages
