@@ -11,6 +11,10 @@ backends:
     config:
       prefix: /dockerhub/
       registry_url: https://registry.hub.docker.com
+  - type: apt
+    config:
+      prefix: /ubuntu/
+      mirror_url: http://archive.ubuntu.com/ubuntu/
   - type: http
     config:
       prefix: /example/

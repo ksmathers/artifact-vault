@@ -22,6 +22,9 @@ def initialize_backends(config):
         elif backend['type'] == 'http':
             from artifact_vault.backend_http import HTTPBackend
             backends.append(HTTPBackend(backend.get('config', {}), cache))
+        elif backend['type'] == 'apt':
+            from artifact_vault.backend_apt import APTBackend
+            backends.append(APTBackend(backend.get('config', {}), cache))
         else:
             logging.warning(f"Unknown backend type: {backend['type']}")
     return backends 

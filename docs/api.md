@@ -283,7 +283,7 @@ class MyBackend:
             
             # Cache complete content
             if content_buffer:
-                self.cache.set(self.prefix, artifact_path, bytes(content_buffer))
+                self.cache.add(self.prefix, artifact_path, bytes(content_buffer))
                 
         except requests.RequestException as e:
             yield {"error": f"Failed to fetch: {str(e)}"}
@@ -492,7 +492,7 @@ class TestMyServiceBackend(unittest.TestCase):
         self.assertEqual(len(chunks), 2)
         self.assertEqual(chunks[0]['content'], b'chunk1')
         self.assertEqual(chunks[1]['content'], b'chunk2')
-        self.cache.set.assert_called_once()
+        self.cache.add.assert_called_once()
     
     def test_fetch_cache_hit(self):
         # Mock cache hit

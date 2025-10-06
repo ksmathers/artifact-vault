@@ -182,7 +182,7 @@ class MyServiceBackend:
             
             # Cache complete content
             if content_buffer:
-                self.cache.set(self.prefix, artifact_path, bytes(content_buffer))
+                self.cache.add(self.prefix, artifact_path, bytes(content_buffer))
                 
         except requests.RequestException as e:
             yield {"error": f"Failed to fetch from MyService: {str(e)}"}
@@ -496,7 +496,7 @@ try:
         yield chunk_data
     
     # Only cache if complete download succeeded
-    self.cache.set(self.prefix, artifact_path, bytes(content_buffer))
+    self.cache.add(self.prefix, artifact_path, bytes(content_buffer))
 except Exception:
     # Don't cache partial downloads
     pass

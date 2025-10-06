@@ -1,6 +1,6 @@
 # Artifact Vault
 
-A high-performance read-through cache for binary artifacts that supports multiple backend sources including PyPI, DockerHub, and generic HTTP/HTTPS servers. Artifact Vault provides transparent caching and streaming delivery of artifacts through a unified HTTP API.
+A high-performance read-through cache for binary artifacts that supports multiple backend sources including PyPI, DockerHub, Ubuntu/Debian APT, and generic HTTP/HTTPS servers. Artifact Vault provides transparent caching and streaming delivery of artifacts through a unified HTTP API.
 
 ## Overview
 
@@ -20,6 +20,7 @@ Artifact Vault acts as a caching proxy that sits between your applications and a
 - **HTTP Backend**: Generic HTTP/HTTPS artifact caching with streaming support
 - **PyPI Backend**: Python Package Index integration with custom index support
 - **DockerHub Backend**: Docker Hub registry with authentication and manifest support
+- **APT Backend**: Debian/Ubuntu package repository caching for .deb packages
 
 ## Quick Start
 
@@ -57,6 +58,7 @@ For detailed information, see the documentation in the [`docs/`](docs/) director
 - **[Configuration Guide](docs/configuration.md)** - Complete configuration reference and examples
 - **[Docker Integration](docs/docker-integration.md)** - Set up Docker to use Artifact Vault as a registry mirror
 - **[Python pip Integration](docs/python-pip-integration.md)** - Configure pip to use Artifact Vault as a PyPI mirror
+- **[APT Integration](docs/apt-integration.md)** - Configure APT to use Artifact Vault for Debian package caching
 - **[Troubleshooting](docs/troubleshooting.md)** - Common issues, performance tuning, and debugging
 
 ### 🔧 Developer Resources
@@ -73,6 +75,7 @@ For detailed information, see the documentation in the [`docs/`](docs/) director
   - `backend_http.py`: Generic HTTP/HTTPS support
   - `backend_pypi.py`: Python Package Index integration
   - `backend_dockerhub.py`: Docker Hub registry support
+  - `backend_apt.py`: Debian/Ubuntu APT repository support
 
 ### Request Flow
 
@@ -97,6 +100,7 @@ For detailed information, see the documentation in the [`docs/`](docs/) director
 - [Configuration Examples](docs/configuration.md#examples)
 - [Docker Setup](docs/docker-integration.md#docker-daemon-configuration)
 - [Python pip Setup](docs/python-pip-integration.md#pip-configuration-methods)
+- [APT Setup](docs/apt-integration.md#client-configuration)
 - [Adding New Backends](docs/development.md#adding-new-backends)
 - [Troubleshooting](docs/troubleshooting.md#common-issues)
 

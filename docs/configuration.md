@@ -101,6 +101,32 @@ Docker Hub registry with authentication and manifest support.
 | `username` | No | - | DockerHub username for authenticated access |
 | `password` | No | - | DockerHub password for authenticated access |
 
+### APT Backend
+
+APT repository backend for caching Debian packages and repository metadata.
+
+```yaml
+- type: apt
+  config:
+    prefix: /apt/                            # URL prefix to match requests
+    mirror_url: http://archive.ubuntu.com/ubuntu/ # APT mirror URL (required)
+    user_agent: Artifact-Vault APT Backend/1.0    # User agent string (optional)
+    timeout: 30                              # Request timeout in seconds (optional)
+    username: your_username                  # Username for private repos (optional)
+    password: your_password                  # Password for private repos (optional)
+```
+
+#### APT Backend Options
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `prefix` | Yes | - | URL prefix to match requests (e.g., `/apt/`) |
+| `mirror_url` | Yes | - | APT mirror URL (e.g., `http://archive.ubuntu.com/ubuntu/`) |
+| `user_agent` | No | `Artifact-Vault APT Backend/1.0` | User agent string for requests |
+| `timeout` | No | `30` | Request timeout in seconds |
+| `username` | No | - | Username for authenticated access to private repositories |
+| `password` | No | - | Password for authenticated access to private repositories |
+
 ## Configuration Examples
 
 ### Development Configuration

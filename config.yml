@@ -25,3 +25,8 @@ backends:
       prefix: /pypi/
       index_url: https://pypi.org/simple
       packages_url: https://files.pythonhosted.org/packages
+  - type: apt
+    name: ubuntu
+    config:
+      prefix: /ubuntu/
+      mirror_url: http://ports.ubuntu.com/ubuntu-ports/
