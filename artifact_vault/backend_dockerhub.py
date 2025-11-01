@@ -3,48 +3,39 @@ import base64
 import requests
 from urllib.parse import urljoin
 from .cache import Cache
-from typing import Dict
+from typing import Dict, List, Optional, Tuple, Any
 
 
-class DockerHubBackend:
+class DockerRepository:
     """
-    Docker Hub Registry Backend for Artifact Vault
+    Represents a single Docker registry repository.
     
-    Supports Docker Registry HTTP API V2 for downloading Docker images,
-    manifests, and individual layers/blobs from Docker Hub and compatible registries.
-    
-    Path format examples:
-    - /dockerhub/library/ubuntu/manifests/latest
-    - /dockerhub/library/ubuntu/blobs/sha256:abc123...
-    - /dockerhub/myuser/myimage/manifests/v1.0
+    Handles authentication, manifest, and blob fetching for a specific registry.
+    Multiple DockerRepository instances can be combined to support multi-registry
+    scenarios with fallback behavior.
     """
     
-    def __init__(self, config : Dict[str,str], cache : Cache):
-        self.config = config
-        self.cache = cache
-        self.prefix = config.get('prefix', '/dockerhub/')
-        self.registry_url = config.get('registry_url', 'https://registry-1.docker.io')
-        self.auth_url = config.get('auth_url', 'https://auth.docker.io')
+    def __init__(self, registry_url: str, auth_url: str, 
+                 username: Optional[str] = None, password: Optional[str] = None):
+        """
+        Initialize a Docker repository connection.
         
-        # Remove trailing slash for consistent URL building
-        if self.registry_url.endswith('/'):
-            self.registry_url = self.registry_url[:-1]
-        if self.auth_url.endswith('/'):
-            self.auth_url = self.auth_url[:-1]
-            
-        # Optional authentication credentials
-        self.username = config.get('username')
-        self.password = config.get('password')
+        Args:
+            registry_url: Base URL of the Docker registry (e.g., 'https://registry-1.docker.io')
+            auth_url: Authentication URL for token acquisition (e.g., 'https://auth.docker.io')
+            username: Optional username for authenticated access
+            password: Optional password for authenticated access
+        """
+        self.registry_url = registry_url.rstrip('/')
+        self.auth_url = auth_url.rstrip('/')
+        self.username = username
+        self.password = password
         
         # Token cache to avoid re-authentication for each request
         self._auth_token = None
         self._auth_token_scope = None
-
-    def can_handle(self, path):
-        """Check if this backend can handle the given path."""
-        return path.startswith(self.prefix)
-
-    def _get_auth_token(self, repository, actions=['pull']):
+    
+    def _get_auth_token(self, repository: str, actions: Optional[List[str]] = None) -> Optional[str]:
         """
         Get Docker Hub authentication token for the given repository and actions.
         
@@ -55,6 +46,9 @@ class DockerHubBackend:
         Returns:
             Authentication token string or None if authentication fails
         """
+        if actions is None:
+            actions = ['pull']
+        
         scope = f"repository:{repository}:{''.join(actions)}"
         
         # Return cached token if it matches the scope
@@ -92,75 +86,21 @@ class DockerHubBackend:
                 
         except Exception as e:
             # Log error but continue with anonymous access
-            print(f"Authentication failed: {e}")
+            print(f"Authentication failed for {self.registry_url}: {e}")
             return None
-
-    def _parse_repository_path(self, artifact_path):
+    
+    def fetch_artifact(self, repository: str, resource_type: str, identifier: str):
         """
-        Parse artifact path to extract repository, resource type, and identifier.
+        Fetch a Docker artifact (manifest or blob) from this registry.
         
-        Examples:
-        - 'library/ubuntu/manifests/latest' -> ('library/ubuntu', 'manifests', 'latest')
-        - 'myuser/myimage/blobs/sha256:abc123' -> ('myuser/myimage', 'blobs', 'sha256:abc123')
-        
-        Returns:
-            Tuple of (repository, resource_type, identifier) or None if invalid
-        """
-        parts = artifact_path.strip('/').split('/')
-        
-        if len(parts) < 4:
-            return None
+        Args:
+            repository: Repository name (e.g., 'library/ubuntu')
+            resource_type: Either 'manifests' or 'blobs'
+            identifier: Tag name, digest, or blob identifier
             
-        # Handle official images (library namespace)
-        if len(parts) == 4 and parts[0] != 'library':
-            # Non-official image: user/image/type/id
-            repository = f"{parts[0]}/{parts[1]}"
-            resource_type = parts[2]
-            identifier = parts[3]
-        else:
-            # Official image or explicit library: library/image/type/id
-            if parts[0] == 'library':
-                repository = '/'.join(parts[:2])
-                resource_type = parts[2]
-                identifier = parts[3]
-            else:
-                # Assume first part is username for non-library images
-                repository = f"{parts[0]}/{parts[1]}"
-                resource_type = parts[2]
-                identifier = parts[3]
-        
-        if resource_type not in ['manifests', 'blobs']:
-            return None
-            
-        return repository, resource_type, identifier
-
-    def fetch(self, path):
+        Yields:
+            Chunks with progress information or error information
         """
-        Fetch Docker artifact (manifest or blob) from Docker Hub registry.
-        
-        Yields chunks of the artifact content with progress information.
-        """
-        artifact_path = path[len(self.prefix):]
-        
-        # Check cache first
-        hit = self.cache.has(self.prefix, artifact_path)
-        if hit:
-            cached_content = hit.binary
-            yield {
-                "total_length": len(cached_content),
-                "content": cached_content,
-                "bytes_downloaded": len(cached_content)
-            }
-            return
-        
-        # Parse the path
-        parsed = self._parse_repository_path(artifact_path)
-        if not parsed:
-            yield {"error": f"Invalid Docker artifact path: {artifact_path}"}
-            return
-            
-        repository, resource_type, identifier = parsed
-        
         # Get authentication token
         auth_token = self._get_auth_token(repository)
         
@@ -208,16 +148,19 @@ class DockerHubBackend:
                             "bytes_downloaded": len(content_buffer)
                         }
                 
-                # Cache the complete content only if download was successful
+                # Return complete content buffer for caching
                 if content_buffer:
-                    self.cache.add(self.prefix, artifact_path, bytes(content_buffer))
+                    yield {
+                        "complete": True,
+                        "content_buffer": bytes(content_buffer)
+                    }
                     
             except Exception as e:
                 yield {"error": f"Error during streaming download: {str(e)}"}
                 return
                 
         except requests.RequestException as e:
-            if hasattr(e.response, 'status_code'):
+            if hasattr(e, 'response') and e.response is not None:
                 if e.response.status_code == 401:
                     yield {"error": f"Authentication failed for {repository}. Check credentials."}
                 elif e.response.status_code == 404:
@@ -233,6 +176,185 @@ class DockerHubBackend:
             # Ensure response is properly closed
             if response is not None:
                 response.close()
+
+
+class DockerHubBackend:
+    """
+    Docker Hub Registry Backend for Artifact Vault
+    
+    Supports Docker Registry HTTP API V2 for downloading Docker images,
+    manifests, and individual layers/blobs from Docker Hub and compatible registries.
+    
+    This backend can manage multiple Docker registries, attempting each in order
+    until an artifact is found. Name conflicts are resolved by prioritizing
+    repositories in the order they are defined.
+    
+    Path format examples:
+    - /dockerhub/library/ubuntu/manifests/latest
+    - /dockerhub/library/ubuntu/blobs/sha256:abc123...
+    - /dockerhub/myuser/myimage/manifests/v1.0
+    """
+    
+    def __init__(self, config: Dict[str, Any], cache: Cache):
+        """
+        Initialize DockerHub backend with support for multiple repositories.
+        
+        Config can specify either a single repository or multiple repositories:
+        
+        Single repository (backward compatible):
+        {
+            'prefix': '/dockerhub/',
+            'registry_url': 'https://registry-1.docker.io',
+            'auth_url': 'https://auth.docker.io',
+            'username': 'optional_username',
+            'password': 'optional_password'
+        }
+        
+        Multiple repositories:
+        {
+            'prefix': '/dockerhub/',
+            'repositories': [
+                {
+                    'registry_url': 'https://my-private-registry.com',
+                    'auth_url': 'https://my-private-registry.com/auth',
+                    'username': 'user1',
+                    'password': 'pass1'
+                },
+                {
+                    'registry_url': 'https://registry-1.docker.io',
+                    'auth_url': 'https://auth.docker.io'
+                }
+            ]
+        }
+        """
+        self.config = config
+        self.cache = cache
+        self.prefix = config.get('prefix', '/dockerhub/')
+        
+        # Initialize repositories
+        self.repositories: List[DockerRepository] = []
+        
+        # Check if multiple repositories are configured
+        if 'repositories' in config:
+            for repo_config in config['repositories']:
+                repository = DockerRepository(
+                    registry_url=repo_config.get('registry_url', 'https://registry-1.docker.io'),
+                    auth_url=repo_config.get('auth_url', 'https://auth.docker.io'),
+                    username=repo_config.get('username'),
+                    password=repo_config.get('password')
+                )
+                self.repositories.append(repository)
+        else:
+            # Single repository configuration (backward compatible)
+            repository = DockerRepository(
+                registry_url=config.get('registry_url', 'https://registry-1.docker.io'),
+                auth_url=config.get('auth_url', 'https://auth.docker.io'),
+                username=config.get('username'),
+                password=config.get('password')
+            )
+            self.repositories.append(repository)
+
+    def can_handle(self, path):
+        """Check if this backend can handle the given path."""
+        return path.startswith(self.prefix)
+
+    def _parse_repository_path(self, artifact_path: str) -> Optional[Tuple[str, str, str]]:
+        """
+        Parse artifact path to extract repository, resource type, and identifier.
+        
+        Examples:
+        - 'library/ubuntu/manifests/latest' -> ('library/ubuntu', 'manifests', 'latest')
+        - 'myuser/myimage/blobs/sha256:abc123' -> ('myuser/myimage', 'blobs', 'sha256:abc123')
+        
+        Returns:
+            Tuple of (repository, resource_type, identifier) or None if invalid
+        """
+        parts = artifact_path.strip('/').split('/')
+        
+        if len(parts) < 4:
+            return None
+            
+        # Handle official images (library namespace)
+        if len(parts) == 4 and parts[0] != 'library':
+            # Non-official image: user/image/type/id
+            repository = f"{parts[0]}/{parts[1]}"
+            resource_type = parts[2]
+            identifier = parts[3]
+        else:
+            # Official image or explicit library: library/image/type/id
+            if parts[0] == 'library':
+                repository = '/'.join(parts[:2])
+                resource_type = parts[2]
+                identifier = parts[3]
+            else:
+                # Assume first part is username for non-library images
+                repository = f"{parts[0]}/{parts[1]}"
+                resource_type = parts[2]
+                identifier = parts[3]
+        
+        if resource_type not in ['manifests', 'blobs']:
+            return None
+            
+        return repository, resource_type, identifier
+
+    def fetch(self, path):
+        """
+        Fetch Docker artifact (manifest or blob) from Docker Hub registry.
+        
+        Attempts to fetch from each configured repository in order until successful.
+        Yields chunks of the artifact content with progress information.
+        """
+        artifact_path = path[len(self.prefix):]
+        
+        # Check cache first
+        hit = self.cache.has(self.prefix, artifact_path)
+        if hit:
+            cached_content = hit.binary
+            yield {
+                "total_length": len(cached_content),
+                "content": cached_content,
+                "bytes_downloaded": len(cached_content)
+            }
+            return
+        
+        # Parse the path
+        parsed = self._parse_repository_path(artifact_path)
+        if not parsed:
+            yield {"error": f"Invalid Docker artifact path: {artifact_path}"}
+            return
+            
+        repository, resource_type, identifier = parsed
+        
+        # Try each repository in order until we find the artifact
+        last_error = []
+        for repo in self.repositories:
+            # Track if we got actual content from this repository
+            content_buffer = None
+            has_error = False
+            
+            for chunk in repo.fetch_artifact(repository, resource_type, identifier):
+                if "error" in chunk:
+                    # This repository doesn't have the artifact or had an error
+                    last_error.append(chunk["error"])
+                    has_error = True
+                    break
+                elif "complete" in chunk and chunk["complete"]:
+                    # Repository successfully fetched the complete artifact
+                    content_buffer = chunk["content_buffer"]
+                else:
+                    # Normal progress chunk
+                    yield chunk
+            
+            # If we successfully downloaded from this repository, cache and return
+            if content_buffer is not None and not has_error:
+                self.cache.add(self.prefix, artifact_path, content_buffer)
+                return
+        
+        # If we get here, none of the repositories had the artifact
+        if last_error:
+            yield {"error": f"Artifact not found in any configured registry. Errors: {last_error}"}
+        else:
+            yield {"error": f"Artifact not found in any configured registry: {artifact_path}"}
 
     def get_manifest(self, repository, tag_or_digest):
         """

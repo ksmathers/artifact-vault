@@ -1,0 +1,43 @@
+# Example configuration for multi-registry Docker support
+# This demonstrates how to configure multiple Docker registries with fallback
+
+http_host: localhost
+http_port: 8080
+cache_dir: /tmp/artifact_cache
+log_level: INFO
+
+backends:
+  # Multi-registry Docker backend
+  # Registries are tried in order until artifact is found
+  - type: dockerhub
+    name: docker-multi
+    config:
+      prefix: /dockerhub/
+      repositories:
+        # Private registry (checked first for highest priority)
+        - registry_url: https://my-private-registry.company.com
+          auth_url: https://my-private-registry.company.com/auth
+          username: myuser
+          password: mypassword
+        
+        # Corporate mirror (checked second)
+        - registry_url: https://docker-mirror.company.com
+          auth_url: https://docker-mirror.company.com/auth
+        
+        # Public Docker Hub (fallback, checked last)
+        - registry_url: https://registry-1.docker.io
+          auth_url: https://auth.docker.io
+  
+  # Other backends
+  - type: pypi
+    name: pypi.org
+    config:
+      prefix: /pypi/
+      index_url: https://pypi.org/simple
+      packages_url: https://files.pythonhosted.org/packages
+  
+  - type: http
+    name: apache.org
+    config:
+      prefix: /archive.apache.org/
+      base_url: https://archive.apache.org/dist
