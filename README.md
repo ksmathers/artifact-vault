@@ -41,6 +41,24 @@ python main.py --config config.yml
 
 The server starts on `localhost:8080` by default.
 
+### Client Configuration
+
+Use the included installation script to automatically configure applications to use Artifact Vault:
+
+```bash
+# Configure pip to use Artifact Vault
+./install.sh pip http://localhost:8080
+
+# Configure APT (requires sudo)
+./install.sh apt http://localhost:8080
+
+# Configure Docker (requires sudo)
+./install.sh docker http://localhost:8080
+
+# Dry run to see what would be changed
+./install.sh pip http://localhost:8080 --dry-run --verbose
+```
+
 ### Basic Usage
 
 ```bash
@@ -97,6 +115,7 @@ For detailed information, see the documentation in the [`docs/`](docs/) director
 
 ## Quick Links
 
+- **Quick Setup**: Use `./install.sh <app> <url>` for automatic configuration
 - [Configuration Examples](docs/configuration.md#examples)
 - [Docker Setup](docs/docker-integration.md#docker-daemon-configuration)
 - [Python pip Setup](docs/python-pip-integration.md#pip-configuration-methods)

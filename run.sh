@@ -1,1 +1,1 @@
-python main.py --config config.yml --log-level INFO
+python main.py --config config.yml --log-level DEBUG
