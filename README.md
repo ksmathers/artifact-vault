@@ -21,6 +21,7 @@ Artifact Vault acts as a caching proxy that sits between your applications and a
 - **PyPI Backend**: Python Package Index integration with custom index support
 - **DockerHub Backend**: Docker Hub registry with authentication and manifest support
 - **APT Backend**: Debian/Ubuntu package repository caching for .deb packages
+- **Hugging Face Backend**: Transparent caching for Hugging Face models and datasets with redirect handling
 
 ## Quick Start
 
@@ -77,6 +78,7 @@ For detailed information, see the documentation in the [`docs/`](docs/) director
 - **[Docker Integration](docs/docker-integration.md)** - Set up Docker to use Artifact Vault as a registry mirror
 - **[Python pip Integration](docs/python-pip-integration.md)** - Configure pip to use Artifact Vault as a PyPI mirror
 - **[APT Integration](docs/apt-integration.md)** - Configure APT to use Artifact Vault for Debian package caching
+- **[Hugging Face Integration](docs/huggingface-integration.md)** - Use Artifact Vault for caching Hugging Face models and datasets
 - **[Troubleshooting](docs/troubleshooting.md)** - Common issues, performance tuning, and debugging
 
 ### 🔧 Developer Resources
@@ -94,6 +96,7 @@ For detailed information, see the documentation in the [`docs/`](docs/) director
   - `backend_pypi.py`: Python Package Index integration
   - `backend_dockerhub.py`: Docker Hub registry support
   - `backend_apt.py`: Debian/Ubuntu APT repository support
+  - `backend_huggingface.py`: Hugging Face model and dataset caching
 
 ### Request Flow
 

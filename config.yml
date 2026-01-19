@@ -9,6 +9,11 @@ http_port: 8080
 cache_dir: /Volumes/Extra/artifact_vault
 log_level: INFO
 backends:
+  - type: huggingface
+    name: huggingface.co
+    config:
+      prefix: /huggingface/
+      base_url: https://huggingface.co
   - type: http
     name: apache.org
     config:

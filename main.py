@@ -12,7 +12,7 @@ def initialize_backends(config):
     cache = Cache(config)
     backends = []
     for backend in config.get('backends', []):
-        logging.info(f"Initializing backend: {backend['type']}/{backend.get('name', '*unnamed*')}")
+        logging.info(f"Initializing {backend['type']} backend: {backend.get('name', '*unnamed*')}")
         if backend['type'] == 'pypi':
             from artifact_vault.backend_pypi import PyPIBackend
             backends.append(PyPIBackend(backend.get('config', {}), cache))
@@ -25,6 +25,9 @@ def initialize_backends(config):
         elif backend['type'] == 'apt':
             from artifact_vault.backend_apt import APTBackend
             backends.append(APTBackend(backend.get('config', {}), cache))
+        elif backend['type'] == 'huggingface':
+            from artifact_vault.backend_huggingface import HuggingFaceBackend
+            backends.append(HuggingFaceBackend(backend.get('config', {}), cache))
         else:
             logging.warning(f"Unknown backend type: {backend['type']}")
     return backends 
@@ -45,6 +48,54 @@ def start_http_server(config, backends):
     #import threading
 
     class ArtifactRequestHandler(SimpleHTTPRequestHandler):
+        def do_HEAD(self):
+            """Handle HEAD requests by checking cache or proxying to upstream."""
+            import requests
+            for backend in backends:
+                if backend.can_handle(self.path):
+                    # Check if we have it cached
+                    artifact_path = self.path[len(backend.prefix):]
+                    hit = backend.cache.has(backend.prefix, artifact_path)
+                    if hit:
+                        # We have it cached - return headers
+                        self.send_response(200)
+                        self.send_header("Content-Type", hit.content_type)
+                        self.send_header("Content-Length", str(len(hit.binary)))
+                        self.end_headers()
+                        return
+                    
+                    # Not cached - make a HEAD request upstream to get real headers
+                    # This is important for huggingface_hub validation
+                    try:
+                        # Construct upstream URL (specific to HuggingFace backend for now)
+                        if hasattr(backend, 'base_url'):
+                            upstream_url = f"{backend.base_url}/{artifact_path}"
+                            headers = {}
+                            if hasattr(backend, '_get_auth_headers'):
+                                headers = backend._get_auth_headers()
+                            
+                            # Make HEAD request, following redirects
+                            response = requests.head(upstream_url, headers=headers, allow_redirects=True, timeout=30)
+                            
+                            # Proxy the response
+                            self.send_response(response.status_code)
+                            # Copy important headers
+                            for header in ['Content-Type', 'Content-Length', 'ETag', 'Last-Modified', 'Accept-Ranges']:
+                                if header in response.headers:
+                                    self.send_header(header, response.headers[header])
+                            self.end_headers()
+                            return
+                    except Exception as e:
+                        logging.warning(f"HEAD request to upstream failed: {e}")
+                        # Fallback to basic response
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/octet-stream")
+                        self.end_headers()
+                        return
+            # No backend can handle this path
+            self.send_response(404)
+            self.end_headers()
+        
         def do_GET(self):
             loglevel = logging.getLogger().level
             #print("headers", self.headers)
@@ -76,7 +127,15 @@ def start_http_server(config, backends):
                                     #     self.send_header("Content-Encoding", artifact["content_encoding"])
                                     self.end_headers()
                                     sent_headers = True
-                                self.wfile.write(artifact["content"])
+                                
+                                # Write content in chunks to avoid socket write size limits
+                                content = artifact["content"]
+                                chunk_size = 65536  # 64KB chunks for writing to socket
+                                offset = 0
+                                while offset < len(content):
+                                    chunk = content[offset:offset + chunk_size]
+                                    self.wfile.write(chunk)
+                                    offset += len(chunk)
                     # EOF
                     return
             logging.warning(f"GET request for unknown backend: {self.path}")

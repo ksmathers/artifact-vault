@@ -11,6 +11,8 @@ This directory contains comprehensive documentation for Artifact Vault. Start wi
 ### User Guides
 - **[Docker Integration](docker-integration.md)** - Set up Docker to use Artifact Vault as a registry mirror
 - **[Python pip Integration](python-pip-integration.md)** - Configure pip to use Artifact Vault as a PyPI mirror
+- **[APT Integration](apt-integration.md)** - Configure APT to use Artifact Vault for Debian package caching
+- **[Hugging Face Integration](huggingface-integration.md)** - Use Artifact Vault for caching Hugging Face models and datasets
 - **[Troubleshooting](troubleshooting.md)** - Common issues, debugging, and production monitoring
 
 ### Developer Resources
@@ -29,6 +31,12 @@ This directory contains comprehensive documentation for Artifact Vault. Start wi
 
 **Set up Python pip caching**
 → [Python pip Integration Guide](python-pip-integration.md)
+
+**Set up Hugging Face model caching**
+→ [Hugging Face Integration Guide](huggingface-integration.md)
+
+**Set up APT package caching**
+→ [APT Integration Guide](apt-integration.md)
 
 **Add a new backend**
 → [Development Guide](development.md#adding-new-backends)
@@ -64,6 +72,21 @@ Complete guide for using Artifact Vault as a PyPI package cache:
 - Integration with Poetry, pipenv, and conda
 - CI/CD pipeline configuration
 - Performance benefits and troubleshooting
+
+### [APT Integration](apt-integration.md)
+Complete guide for using Artifact Vault as an APT package cache:
+- APT configuration for Debian/Ubuntu systems
+- Integration with system package management
+- Performance benefits and troubleshooting
+- Production deployment considerations
+
+### [Hugging Face Integration](huggingface-integration.md)
+Comprehensive guide for using Artifact Vault to cache Hugging Face models and datasets:
+- Configuration with huggingface-hub library
+- Handling 301/302 redirects to CDN
+- Integration with transformers and other ML frameworks
+- Private model support with authentication tokens
+- Performance optimization for large models
 
 ### [Development Guide](development.md)
 Technical documentation for developers:

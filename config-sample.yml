@@ -15,6 +15,14 @@ backends:
     config:
       prefix: /ubuntu/
       mirror_url: http://archive.ubuntu.com/ubuntu/
+  - type: huggingface
+    config:
+      prefix: /huggingface/
+      base_url: https://huggingface.co
+      # Optional: Authentication token for private models/datasets
+      # token: hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      # Optional: Request timeout in seconds (default: 60)
+      # timeout: 120
   - type: http
     config:
       prefix: /example/
