@@ -215,7 +215,7 @@ class HuggingFaceBackend:
             
             # Buffer for caching
             content_buffer = bytearray()
-            chunk_size = 32768  # 32KB chunks (larger for big model files)
+            chunk_size = 1048576  # 1MB chunks for large model files
             
             # Stream data in chunks
             try:
